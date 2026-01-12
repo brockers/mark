@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make build:*)",
+      "Bash(./mark:*)",
+      "Bash(go test:*)",
+      "Bash(chmod:*)",
+      "Bash(make clean:*)",
+      "Bash(make test:*)",
+      "Bash(./scripts/integration_test.sh:*)",
+      "Bash(bash:*)",
+      "Bash(timeout 10:*)",
+      "Bash(echo:*)"
+    ]
+  }
+}
