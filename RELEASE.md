@@ -1,5 +1,31 @@
 # Release Notes
 
+## v0.1.2 - 2026-01-13
+
+### Features
+
+- **Completion enhancements**
+  - Display bookmark paths in tab completion for easier navigation (f3a1156)
+  - Improved visibility of bookmark targets during completion
+
+- **Bookmark improvements**
+  - Add custom path support for creating bookmarks (6a48409)
+  - Enhanced broken bookmark visibility in listings
+
+### Bug Fixes
+
+- **Completion fixes**
+  - Fix tab completion hanging and improve formatting consistency (6aa04f2)
+  - Fix autocomplete not working for shell aliases (3ce6339)
+
+### Refactoring
+
+- **Project structure**
+  - Reorganize Claude command files into commands directory (e551daf)
+  - Better organization following Claude Code conventions
+
+---
+
 ## v0.0.1 - Initial Release (TBD)
 
 **Status**: In Development
