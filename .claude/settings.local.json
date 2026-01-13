@@ -18,7 +18,13 @@
       "Bash(make test-all:*)",
       "Bash(make completion-test:*)",
       "Bash(make fmt:*)",
-      "Bash(make vet:*)"
+      "Bash(make vet:*)",
+      "Bash(git describe:*)",
+      "Bash(git add:*)",
+      "Bash(make bump:*)",
+      "Bash(make release:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git push:*)"
     ]
   }
 }

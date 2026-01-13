@@ -79,3 +79,13 @@ jump   #same as mark -j
 ### Autocomplete
 
 Finally mark has built in autocomplete so you can alway double tab to see which mark you will jump to or delete.
+
+## Related Projects
+
+- [note](https://github.com/brockers/note) - A minimalist, opinionated command line note creation/management application.
+
+## License
+
+This program is free software licensed under GPL-3.0.
+See https://www.gnu.org/licenses/ for details.
+
