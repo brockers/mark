@@ -10,7 +10,8 @@
       "Bash(./scripts/integration_test.sh:*)",
       "Bash(bash:*)",
       "Bash(timeout 10:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(find:*)"
     ]
   }
 }
