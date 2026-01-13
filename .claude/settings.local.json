@@ -13,7 +13,8 @@
       "Bash(echo:*)",
       "Bash(find:*)",
       "Bash(git commit:*)",
-      "Bash(./scripts/setup_integration_test.sh)"
+      "Bash(./scripts/setup_integration_test.sh)",
+      "Bash(./scripts/completion_test.sh)"
     ]
   }
 }

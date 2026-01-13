@@ -161,6 +161,9 @@ _mark_complete() {
 }
 
 complete -F _mark_complete mark
+complete -F _mark_complete marks
+complete -F _mark_complete unmark
+complete -F _mark_complete jump
 `
 
 	if err := os.WriteFile(completionScriptPath, []byte(bashCompletionScript), 0644); err != nil {
@@ -232,6 +235,9 @@ _mark_complete() {
 }
 
 compdef _mark_complete mark
+compdef _mark_complete marks
+compdef _mark_complete unmark
+compdef _mark_complete jump
 `
 
 	if err := os.WriteFile(completionScriptPath, []byte(zshCompletionScript), 0644); err != nil {
@@ -292,6 +298,11 @@ complete -c mark -s h -l help -d "Show help"
 complete -c mark -n '__fish_is_first_token' -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)'
 complete -c mark -n '__fish_seen_subcommand_from -d' -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)'
 complete -c mark -n '__fish_seen_subcommand_from -j' -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)'
+
+# Alias completions
+complete -c marks -f -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)' -d "List bookmarks"
+complete -c unmark -f -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)' -d "Delete bookmark"
+complete -c jump -f -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)' -d "Jump to bookmark"
 `
 
 	markCompletionFile := filepath.Join(fishCompletionDir, "mark.fish")

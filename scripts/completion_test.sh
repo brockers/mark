@@ -253,6 +253,51 @@ run_alias_test "jump" "Alias 'jump' should complete home bookmark" "home" 1
 run_alias_test "jump" "Alias 'jump' should complete docs bookmark" "docs" 1
 
 echo
+echo "Verifying completion registration for all aliases..."
+
+# Generate the actual completion script to verify it has all aliases
+TEMP_COMPLETION_DIR=$(mktemp -d)
+export HOME="$TEMP_COMPLETION_DIR"
+trap "rm -rf $TEMP_COMPLETION_DIR" EXIT
+
+# Create a simple test to extract the bash completion script
+# We'll read it directly from the Go code's embedded string
+# by checking what the mark binary generates
+MARK_BINARY="$(dirname "$0")/../mark"
+
+# Create a config file first so it doesn't go through setup
+mkdir -p "$HOME/.marks"
+echo "marksdir=$HOME/.marks" > "$HOME/.mark"
+
+# Extract the completion script content by running mark and checking the generated file
+# We need to simulate the completion setup
+export SHELL="/bin/bash"
+echo "y" | "$MARK_BINARY" --autocomplete > /dev/null 2>&1 || true
+
+BASH_COMPLETION_FILE="$HOME/.mark.bash"
+
+if [ -f "$BASH_COMPLETION_FILE" ]; then
+    if grep -q "complete -F _mark_complete mark" "$BASH_COMPLETION_FILE" &&
+       grep -q "complete -F _mark_complete marks" "$BASH_COMPLETION_FILE" &&
+       grep -q "complete -F _mark_complete unmark" "$BASH_COMPLETION_FILE" &&
+       grep -q "complete -F _mark_complete jump" "$BASH_COMPLETION_FILE"; then
+        echo -e "${GREEN}✓${NC} All aliases have completion registered in generated script"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Missing completion registration for one or more aliases"
+        echo "Generated completion script should contain:"
+        echo "  complete -F _mark_complete mark"
+        echo "  complete -F _mark_complete marks"
+        echo "  complete -F _mark_complete unmark"
+        echo "  complete -F _mark_complete jump"
+        ((TESTS_FAILED++))
+    fi
+else
+    echo -e "${RED}✗${NC} Completion script was not generated"
+    ((TESTS_FAILED++))
+fi
+
+echo
 echo "==================================="
 echo "Test Summary:"
 echo -e "  Passed: ${GREEN}$TESTS_PASSED${NC}"
