@@ -134,28 +134,57 @@ func SetupBashCompletion() {
 	completionScriptPath := filepath.Join(homeDir, ".mark.bash")
 	bashCompletionScript := `#!/bin/bash
 
+# Helper function to get bookmarks with their paths for display
+_mark_list_with_paths() {
+    if [[ ! -d ~/.marks ]]; then
+        return
+    fi
+
+    local mark target
+    for mark in ~/.marks/*; do
+        if [[ -L "$mark" ]]; then
+            target=$(readlink "$mark" 2>/dev/null || echo "[broken]")
+            printf "%-20s -> %s\n" "$(basename "$mark")" "$target"
+        fi
+    done | sort
+}
+
 _mark_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    local cmd="${COMP_WORDS[0]}"
 
     # If we're on the first argument
     if [[ ${COMP_CWORD} -eq 1 ]]; then
-        # If user starts typing a dash, offer flags
-        if [[ "$cur" == -* ]]; then
+        # If user starts typing a dash, offer flags (only for 'mark' command)
+        if [[ "$cur" == -* && "$cmd" == "mark" ]]; then
             local flags="-l -d -j -v -h --config --autocomplete --alias --help --version"
             COMPREPLY=($(compgen -W "$flags" -- "${cur}"))
         else
-            # For create command, offer existing bookmarks as suggestions
+            # For bookmark completion, show formatted list
             if [[ -d ~/.marks ]]; then
+                # Get bookmark names for actual completion
                 local marks=$(ls ~/.marks 2>/dev/null | tr '\n' ' ')
                 COMPREPLY=($(compgen -W "$marks" -- "${cur}"))
+
+                # If there are multiple matches or user hit tab twice, show formatted list
+                if [[ ${#COMPREPLY[@]} -gt 1 ]]; then
+                    echo >&2  # Newline before the list
+                    _mark_list_with_paths >&2
+                fi
             fi
         fi
-    # If previous was -d or -j, offer bookmark names
+    # If previous was -d or -j, offer bookmark names with paths
     elif [[ "$prev" == "-d" || "$prev" == "-j" ]]; then
         if [[ -d ~/.marks ]]; then
             local marks=$(ls ~/.marks 2>/dev/null | tr '\n' ' ')
             COMPREPLY=($(compgen -W "$marks" -- "${cur}"))
+
+            # Show formatted list when multiple matches
+            if [[ ${#COMPREPLY[@]} -gt 1 ]]; then
+                echo >&2  # Newline before the list
+                _mark_list_with_paths >&2
+            fi
         fi
     fi
 }
@@ -208,28 +237,55 @@ func SetupZshCompletion() {
 _mark_complete() {
     local cur="${words[CURRENT]}"
     local prev="${words[CURRENT-1]}"
+    local cmd="${words[1]}"
 
     # If we're on the first argument
     if [[ $CURRENT -eq 2 ]]; then
-        # If user starts typing a dash, offer flags
-        if [[ "$cur" == -* ]]; then
+        # If user starts typing a dash, offer flags (only for 'mark' command)
+        if [[ "$cur" == -* && "$cmd" == "mark" ]]; then
             local flags=("-l" "-d" "-j" "-v" "-h" "--config" "--autocomplete" "--alias" "--help" "--version")
             compadd -a flags
         else
-            # For create command, offer existing bookmarks as suggestions
-            local marks=()
+            # For bookmark completion, offer with descriptions
             if [[ -d ~/.marks ]]; then
-                local all_marks=(${(f)"$(ls ~/.marks 2>/dev/null)"})
-                marks=("${all_marks[@]}")
+                local -a marks descriptions
+                local mark target
+
+                # Build arrays of marks and their descriptions
+                for mark in ~/.marks/*(.N); do
+                    if [[ -L "$mark" ]]; then
+                        target=$(readlink "$mark" 2>/dev/null || echo "[broken]")
+                        marks+=($(basename "$mark"))
+                        descriptions+=("-> $target")
+                    fi
+                done
+
+                # Use compadd with descriptions
+                if [[ ${#marks[@]} -gt 0 ]]; then
+                    compadd -d descriptions -a marks
+                fi
             fi
-            compadd -a marks
         fi
 
-    # If previous was -d or -j, offer bookmark names
+    # If previous was -d or -j, offer bookmark names with descriptions
     elif [[ "$prev" == "-d" || "$prev" == "-j" ]]; then
         if [[ -d ~/.marks ]]; then
-            local marks=(${(f)"$(ls ~/.marks 2>/dev/null)"})
-            compadd -a marks
+            local -a marks descriptions
+            local mark target
+
+            # Build arrays of marks and their descriptions
+            for mark in ~/.marks/*(.N); do
+                if [[ -L "$mark" ]]; then
+                    target=$(readlink "$mark" 2>/dev/null || echo "[broken]")
+                    marks+=($(basename "$mark"))
+                    descriptions+=("-> $target")
+                fi
+            done
+
+            # Use compadd with descriptions
+            if [[ ${#marks[@]} -gt 0 ]]; then
+                compadd -d descriptions -a marks
+            fi
         fi
     fi
 }
@@ -284,6 +340,20 @@ func SetupFishCompletion() {
 
 	// Create a fish completion script
 	fishCompletionScript := `# mark command completion for fish
+
+# Helper function to list bookmarks with their paths
+function __fish_mark_list_bookmarks
+    if test -d ~/.marks
+        for mark in ~/.marks/*
+            if test -L "$mark"
+                set -l target (readlink "$mark" 2>/dev/null; or echo "[broken]")
+                set -l name (basename "$mark")
+                echo -e "$name\t-> $target"
+            end
+        end
+    end
+end
+
 complete -c mark -f
 complete -c mark -s l -d "List bookmarks"
 complete -c mark -s d -d "Delete bookmark" -r
@@ -294,15 +364,17 @@ complete -c mark -l alias -d "Setup shell aliases"
 complete -c mark -s v -l version -d "Show version"
 complete -c mark -s h -l help -d "Show help"
 
-# Complete with existing bookmark names for main argument and -d/-j flags
-complete -c mark -n '__fish_is_first_token' -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)'
-complete -c mark -n '__fish_seen_subcommand_from -d' -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)'
-complete -c mark -n '__fish_seen_subcommand_from -j' -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)'
+# Complete with existing bookmark names with paths for main argument
+complete -c mark -n '__fish_is_first_token' -a '(__fish_mark_list_bookmarks)'
 
-# Alias completions
-complete -c marks -f -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)' -d "List bookmarks"
-complete -c unmark -f -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)' -d "Delete bookmark"
-complete -c jump -f -a '(if test -d ~/.marks; ls ~/.marks 2>/dev/null; end)' -d "Jump to bookmark"
+# Complete with bookmark names and paths for -d and -j flags
+complete -c mark -n '__fish_seen_subcommand_from -d' -a '(__fish_mark_list_bookmarks)'
+complete -c mark -n '__fish_seen_subcommand_from -j' -a '(__fish_mark_list_bookmarks)'
+
+# Alias completions with descriptions
+complete -c marks -f -a '(__fish_mark_list_bookmarks)'
+complete -c unmark -f -a '(__fish_mark_list_bookmarks)'
+complete -c jump -f -a '(__fish_mark_list_bookmarks)'
 `
 
 	markCompletionFile := filepath.Join(fishCompletionDir, "mark.fish")

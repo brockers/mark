@@ -292,6 +292,15 @@ if [ -f "$BASH_COMPLETION_FILE" ]; then
         echo "  complete -F _mark_complete jump"
         ((TESTS_FAILED++))
     fi
+
+    # Verify the helper function for formatted output exists
+    if grep -q "_mark_list_with_paths" "$BASH_COMPLETION_FILE"; then
+        echo -e "${GREEN}✓${NC} Completion script includes formatted bookmark display helper"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Completion script missing _mark_list_with_paths helper function"
+        ((TESTS_FAILED++))
+    fi
 else
     echo -e "${RED}✗${NC} Completion script was not generated"
     ((TESTS_FAILED++))
