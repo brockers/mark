@@ -623,12 +623,12 @@ func listBookmarks(config Config) {
 		return bookmarks[i].name < bookmarks[j].name
 	})
 
-	// Print bookmarks
+	// Print bookmarks with aligned arrows
 	for _, bm := range bookmarks {
 		if bm.broken {
-			fmt.Printf("  %s -> [%sbroken%s] %s%s%s\n", bm.name, colorRed, colorReset, colorRed, bm.target, colorReset)
+			fmt.Printf("  %-20s -> [%sbroken%s] %s%s%s\n", bm.name, colorRed, colorReset, colorRed, bm.target, colorReset)
 		} else {
-			fmt.Printf("  %s -> %s\n", bm.name, bm.target)
+			fmt.Printf("  %-20s -> %s\n", bm.name, bm.target)
 		}
 	}
 }

@@ -39,3 +39,4 @@ test-marks/
 
 # Backup files
 main.go.backup
+Screenshot_*

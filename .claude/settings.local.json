@@ -15,7 +15,10 @@
       "Bash(git commit:*)",
       "Bash(./scripts/setup_integration_test.sh)",
       "Bash(./scripts/completion_test.sh)",
-      "Bash(make test-all:*)"
+      "Bash(make test-all:*)",
+      "Bash(make completion-test:*)",
+      "Bash(make fmt:*)",
+      "Bash(make vet:*)"
     ]
   }
 }

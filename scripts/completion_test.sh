@@ -46,6 +46,9 @@ ln -s "$TEST_DIR/code/golang-app" "$TEST_DIR/.marks/golang"
 ln -s "$TEST_DIR/code/python-script" "$TEST_DIR/.marks/python"
 ln -s "$TEST_DIR/home/bobby" "$TEST_DIR/.marks/home"
 
+# Create a broken symlink for testing
+ln -s "$TEST_DIR/nonexistent/path" "$TEST_DIR/.marks/broken"
+
 # Build the completion script dynamically
 echo "Building completion script..."
 
@@ -165,7 +168,7 @@ run_test "Exact prefix 'doc' should return docs" "doc" 1 "docs"
 run_test "Non-matching 'xyz' should return no results" "xyz" 0 ""
 
 # Test empty input (should return all bookmarks)
-run_test "Empty input should return all bookmarks" "" 7 ""
+run_test "Empty input should return all bookmarks" "" 8 ""
 
 # Test flag completion
 run_test "Flag '-l' should match -l flag" "-l" 1 "-l"
@@ -242,7 +245,7 @@ run_alias_test() {
 # Test 'marks' alias (mark -l)
 run_alias_test "marks" "Alias 'marks' should complete work bookmark" "work" 1
 run_alias_test "marks" "Alias 'marks' should complete p* bookmarks" "p" 2
-run_alias_test "marks" "Alias 'marks' should handle empty input" "" 7
+run_alias_test "marks" "Alias 'marks' should handle empty input" "" 8
 
 # Test 'unmark' alias (mark -d)
 run_alias_test "unmark" "Alias 'unmark' should complete downloads bookmark" "downloads" 1
@@ -253,28 +256,74 @@ run_alias_test "jump" "Alias 'jump' should complete home bookmark" "home" 1
 run_alias_test "jump" "Alias 'jump' should complete docs bookmark" "docs" 1
 
 echo
-echo "Verifying completion registration for all aliases..."
+echo "Testing broken bookmark formatting..."
 
-# Generate the actual completion script to verify it has all aliases
-TEMP_COMPLETION_DIR=$(mktemp -d)
-export HOME="$TEMP_COMPLETION_DIR"
-trap "rm -rf $TEMP_COMPLETION_DIR" EXIT
+# Generate the actual completion script and test broken bookmark formatting
+TEMP_TEST_DIR=$(mktemp -d)
+export TEST_HOME="$TEMP_TEST_DIR"
+trap "rm -rf $TEMP_TEST_DIR" EXIT
 
-# Create a simple test to extract the bash completion script
-# We'll read it directly from the Go code's embedded string
-# by checking what the mark binary generates
+# Create test marks directory with a broken symlink
+mkdir -p "$TEMP_TEST_DIR/.marks"
+ln -s "/nonexistent/path/that/does/not/exist" "$TEMP_TEST_DIR/.marks/broken_test"
+ln -s "$TEMP_TEST_DIR" "$TEMP_TEST_DIR/.marks/working_test"
+
+# Create the bash completion script and test it
 MARK_BINARY="$(dirname "$0")/../mark"
+mkdir -p "$TEST_HOME"
+echo "marksdir=$TEMP_TEST_DIR/.marks" > "$TEST_HOME/.mark"
 
-# Create a config file first so it doesn't go through setup
-mkdir -p "$HOME/.marks"
-echo "marksdir=$HOME/.marks" > "$HOME/.mark"
-
-# Extract the completion script content by running mark and checking the generated file
-# We need to simulate the completion setup
+# Export HOME for the completion setup
+OLD_HOME="$HOME"
+export HOME="$TEST_HOME"
 export SHELL="/bin/bash"
 echo "y" | "$MARK_BINARY" --autocomplete > /dev/null 2>&1 || true
 
-BASH_COMPLETION_FILE="$HOME/.mark.bash"
+# Restore HOME
+export HOME="$OLD_HOME"
+
+BASH_COMPLETION_FILE="$TEST_HOME/.mark.bash"
+
+if [ -f "$BASH_COMPLETION_FILE" ]; then
+    # Source the completion script
+    source "$BASH_COMPLETION_FILE"
+
+    # Test that _mark_list_with_paths detects broken symlinks
+    cd "$TEMP_TEST_DIR"  # Change to test directory for relative paths
+    output=$(_mark_list_with_paths)
+
+    # Check for [broken] marker in output (accounting for ANSI codes between [ and ])
+    if echo "$output" | grep -q "broken"; then
+        echo -e "${GREEN}✓${NC} Broken bookmark formatting includes [broken] marker"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Broken bookmark formatting missing [broken] marker"
+        echo "Output was:"
+        echo "$output"
+        ((TESTS_FAILED++))
+    fi
+
+    # Check for red ANSI color codes (^[[0;31m)
+    if echo "$output" | grep -q $'\033\[0;31m'; then
+        echo -e "${GREEN}✓${NC} Broken bookmark formatting includes red color codes"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Broken bookmark formatting missing red color codes"
+        echo "Output was:"
+        echo "$output"
+        ((TESTS_FAILED++))
+    fi
+else
+    echo -e "${RED}✗${NC} Could not test broken bookmark formatting - completion script not generated"
+    ((TESTS_FAILED++))
+    ((TESTS_FAILED++))
+fi
+
+echo
+echo "Verifying completion registration for all aliases..."
+
+# Reuse the TEST_HOME from the broken bookmark test above
+BASH_COMPLETION_FILE="$TEST_HOME/.mark.bash"
 
 if [ -f "$BASH_COMPLETION_FILE" ]; then
     if grep -q "complete -F _mark_complete mark" "$BASH_COMPLETION_FILE" &&

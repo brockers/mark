@@ -135,18 +135,9 @@ func SetupBashCompletion() {
 	bashCompletionScript := `#!/bin/bash
 
 # Helper function to get bookmarks with their paths for display
+# This simply calls 'mark -l' to ensure consistent formatting
 _mark_list_with_paths() {
-    if [[ ! -d ~/.marks ]]; then
-        return
-    fi
-
-    local mark target
-    for mark in ~/.marks/*; do
-        if [[ -L "$mark" ]]; then
-            target=$(readlink "$mark" 2>/dev/null || echo "[broken]")
-            printf "%-20s -> %s\n" "$(basename "$mark")" "$target"
-        fi
-    done | sort
+    mark -l 2>/dev/null || true
 }
 
 _mark_complete() {
@@ -167,8 +158,9 @@ _mark_complete() {
                 local marks=$(ls ~/.marks 2>/dev/null | tr '\n' ' ')
                 COMPREPLY=($(compgen -W "$marks" -- "${cur}"))
 
-                # If there are multiple matches or user hit tab twice, show formatted list
-                if [[ ${#COMPREPLY[@]} -gt 1 ]]; then
+                # Only show formatted list on double-tab (COMP_TYPE = 63)
+                # Single tab will use bash's default inline completion
+                if [[ ${#COMPREPLY[@]} -gt 1 ]] && [[ ${COMP_TYPE:-} -eq 63 ]]; then
                     echo >&2  # Newline before the list
                     _mark_list_with_paths >&2
                 fi
@@ -180,8 +172,8 @@ _mark_complete() {
             local marks=$(ls ~/.marks 2>/dev/null | tr '\n' ' ')
             COMPREPLY=($(compgen -W "$marks" -- "${cur}"))
 
-            # Show formatted list when multiple matches
-            if [[ ${#COMPREPLY[@]} -gt 1 ]]; then
+            # Only show formatted list on double-tab (COMP_TYPE = 63)
+            if [[ ${#COMPREPLY[@]} -gt 1 ]] && [[ ${COMP_TYPE:-} -eq 63 ]]; then
                 echo >&2  # Newline before the list
                 _mark_list_with_paths >&2
             fi
@@ -246,19 +238,23 @@ _mark_complete() {
             local flags=("-l" "-d" "-j" "-v" "-h" "--config" "--autocomplete" "--alias" "--help" "--version")
             compadd -a flags
         else
-            # For bookmark completion, offer with descriptions
+            # For bookmark completion, parse 'mark -l' output to get names and descriptions
             if [[ -d ~/.marks ]]; then
                 local -a marks descriptions
-                local mark target
+                local name desc
 
-                # Build arrays of marks and their descriptions
-                for mark in ~/.marks/*(.N); do
-                    if [[ -L "$mark" ]]; then
-                        target=$(readlink "$mark" 2>/dev/null || echo "[broken]")
-                        marks+=($(basename "$mark"))
-                        descriptions+=("-> $target")
+                # Parse mark -l output: "  name -> target" or "  name -> [broken] target"
+                while IFS= read -r line; do
+                    # Extract bookmark name (everything before ' ->')
+                    name=$(echo "$line" | sed -E 's/^[[:space:]]*([^[:space:]]+)[[:space:]]*->.*/\1/')
+                    # Extract description (everything from ' ->' onwards)
+                    desc=$(echo "$line" | sed -E 's/^[[:space:]]*[^[:space:]]+[[:space:]]*(->.*)/\1/')
+
+                    if [[ -n "$name" && -n "$desc" ]]; then
+                        marks+=("$name")
+                        descriptions+=("$desc")
                     fi
-                done
+                done < <(mark -l 2>/dev/null)
 
                 # Use compadd with descriptions
                 if [[ ${#marks[@]} -gt 0 ]]; then
@@ -271,16 +267,18 @@ _mark_complete() {
     elif [[ "$prev" == "-d" || "$prev" == "-j" ]]; then
         if [[ -d ~/.marks ]]; then
             local -a marks descriptions
-            local mark target
+            local name desc
 
-            # Build arrays of marks and their descriptions
-            for mark in ~/.marks/*(.N); do
-                if [[ -L "$mark" ]]; then
-                    target=$(readlink "$mark" 2>/dev/null || echo "[broken]")
-                    marks+=($(basename "$mark"))
-                    descriptions+=("-> $target")
+            # Parse mark -l output
+            while IFS= read -r line; do
+                name=$(echo "$line" | sed -E 's/^[[:space:]]*([^[:space:]]+)[[:space:]]*->.*/\1/')
+                desc=$(echo "$line" | sed -E 's/^[[:space:]]*[^[:space:]]+[[:space:]]*(->.*)/\1/')
+
+                if [[ -n "$name" && -n "$desc" ]]; then
+                    marks+=("$name")
+                    descriptions+=("$desc")
                 fi
-            done
+            done < <(mark -l 2>/dev/null)
 
             # Use compadd with descriptions
             if [[ ${#marks[@]} -gt 0 ]]; then
@@ -342,15 +340,11 @@ func SetupFishCompletion() {
 	fishCompletionScript := `# mark command completion for fish
 
 # Helper function to list bookmarks with their paths
+# Parse 'mark -l' output and convert to fish completion format
 function __fish_mark_list_bookmarks
-    if test -d ~/.marks
-        for mark in ~/.marks/*
-            if test -L "$mark"
-                set -l target (readlink "$mark" 2>/dev/null; or echo "[broken]")
-                set -l name (basename "$mark")
-                echo -e "$name\t-> $target"
-            end
-        end
+    mark -l 2>/dev/null | while read -l line
+        # Parse "  name -> target" format into "name\t-> target" format
+        echo "$line" | sed -E 's/^[[:space:]]*([^[:space:]]+)[[:space:]]*(->.*)/\1\t\2/'
     end
 end
 
