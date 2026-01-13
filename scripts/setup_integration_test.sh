@@ -18,17 +18,17 @@ test_count=0
 
 # Test helper functions
 test_pass() {
-    ((PASSED++))
+    ((PASSED++)) || true
     echo -e "${GREEN}✓${NC} $1"
 }
 
 test_fail() {
-    ((FAILED++))
+    ((FAILED++)) || true
     echo -e "${RED}✗${NC} $1"
 }
 
 run_test() {
-    ((test_count++))
+    ((test_count++)) || true
     echo ""
     echo "Test $test_count: $1"
 }
@@ -86,7 +86,7 @@ fi
 # Test 4: Reconfiguration works
 run_test "Reconfiguration updates config"
 CUSTOM_MARKS_DIR="$HOME/custom-marks"
-echo "$CUSTOM_MARKS_DIR" | "$MARK_BINARY" --config >/dev/null 2>&1 </dev/null || true
+printf "$CUSTOM_MARKS_DIR\nn\nn\n" | "$MARK_BINARY" --config >/dev/null 2>&1 || true
 if grep -q "custom-marks" "$HOME/.mark"; then
     test_pass "Config updated with custom path"
 else

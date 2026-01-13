@@ -20,17 +20,17 @@ test_count=0
 
 # Test helper functions
 test_pass() {
-    ((PASSED++))
+    ((PASSED++)) || true
     echo -e "${GREEN}✓${NC} $1"
 }
 
 test_fail() {
-    ((FAILED++))
+    ((FAILED++)) || true
     echo -e "${RED}✗${NC} $1"
 }
 
 run_test() {
-    ((test_count++))
+    ((test_count++)) || true
     echo ""
     echo "Test $test_count: $1"
 }

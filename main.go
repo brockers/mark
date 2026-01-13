@@ -38,25 +38,26 @@ var (
 )
 
 func main() {
-	config, firstTimeSetup := loadOrCreateConfig()
-
-	// If first-time setup was just completed, exit gracefully
-	if firstTimeSetup {
-		return
-	}
-
-	// Parse custom flags with Unix-like behavior
+	// Parse custom flags with Unix-like behavior first
 	flags, args := parseFlags(os.Args[1:])
 
-	// Handle version number
+	// Handle version number (before config load)
 	if flags.Version {
 		printVersion()
 		return
 	}
 
-	// Handle help
+	// Handle help (before config load)
 	if flags.Help {
 		printHelp()
+		return
+	}
+
+	// Load config after checking version/help
+	config, firstTimeSetup := loadOrCreateConfig()
+
+	// If first-time setup was just completed, exit gracefully
+	if firstTimeSetup {
 		return
 	}
 

@@ -11,7 +11,9 @@
       "Bash(bash:*)",
       "Bash(timeout 10:*)",
       "Bash(echo:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git commit:*)",
+      "Bash(./scripts/setup_integration_test.sh)"
     ]
   }
 }
