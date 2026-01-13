@@ -140,6 +140,23 @@ mark/
 
 ## Development Guidelines
 
+### CRITICAL REQUIREMENT: Test-Driven Development
+
+**MANDATORY**: When adding functionality, modifying functionality, or fixing bugs, you **MUST ALWAYS**:
+
+1. **Write tests** to verify the new functionality works correctly
+2. **Add regression tests** for bug fixes to prevent the bug from reoccurring
+3. **Update existing tests** when modifying functionality
+4. **Run `make test-all`** to ensure all tests pass before committing
+
+This is **NON-NEGOTIABLE**. No code changes should be committed without corresponding test coverage.
+
+Test placement:
+- **Unit tests** → `main_test.go` for core functions
+- **Integration tests** → `scripts/integration_test.sh` for end-to-end workflows
+- **Completion tests** → `scripts/completion_test.sh` for shell completion
+- **Setup tests** → `scripts/setup_integration_test.sh` for configuration
+
 ### Code Patterns
 
 - Single-file architecture in `main.go` with `completion.go` for shell integration
@@ -267,12 +284,14 @@ Remember: This is a focused CLI tool following Unix philosophy. Keep changes min
 ### Creating Bookmarks
 
 ```bash
-mark                # Creates bookmark with current directory name
-mark myproject      # Creates bookmark named "myproject"
+mark                     # Creates bookmark with current directory name
+mark myproject           # Creates bookmark named "myproject" pointing to current dir
+mark work ~/projects     # Creates bookmark "work" pointing to ~/projects
 ```
 
 Internally:
-- Gets current directory with `os.Getwd()`
+- If custom path provided, validates and expands the path (supports tilde expansion)
+- Otherwise gets current directory with `os.Getwd()`
 - Sanitizes name (replaces spaces with underscores)
 - Creates symlink in `~/.marks/`
 - Checks for duplicates

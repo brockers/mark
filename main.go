@@ -37,6 +37,12 @@ var (
 	BuildDate = "not set"
 )
 
+const (
+	// ANSI color codes
+	colorRed   = "\033[0;31m"
+	colorReset = "\033[0m"
+)
+
 func main() {
 	// Parse custom flags with Unix-like behavior first
 	flags, args := parseFlags(os.Args[1:])
@@ -99,10 +105,19 @@ func main() {
 
 	// Handle bookmark creation
 	bookmarkName := ""
-	if len(args) > 0 {
-		bookmarkName = strings.Join(args, " ")
+	targetPath := ""
+
+	if len(args) == 1 {
+		// Single argument: bookmark name, use current directory as target
+		bookmarkName = args[0]
+	} else if len(args) >= 2 {
+		// Two arguments: bookmark name and custom path
+		bookmarkName = args[0]
+		targetPath = args[1]
 	}
-	createBookmark(config, bookmarkName)
+	// else: no arguments, createBookmark will use current directory name
+
+	createBookmark(config, bookmarkName, targetPath)
 }
 
 func loadOrCreateConfig() (Config, bool) {
@@ -472,17 +487,43 @@ func expandPath(path string) string {
 	return resolvedPath
 }
 
-func createBookmark(config Config, name string) {
-	// Get current working directory
-	currentDir, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
-		os.Exit(1)
+func createBookmark(config Config, name string, targetPath string) {
+	var targetDir string
+
+	// Determine target directory
+	if targetPath != "" {
+		// Custom path provided - expand and validate it
+		targetDir = expandPath(targetPath)
+
+		// Verify the target directory exists
+		fileInfo, err := os.Stat(targetDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "Error: Target directory does not exist: %s\n", targetPath)
+			} else {
+				fmt.Fprintf(os.Stderr, "Error accessing target directory: %v\n", err)
+			}
+			os.Exit(1)
+		}
+
+		// Verify it's a directory
+		if !fileInfo.IsDir() {
+			fmt.Fprintf(os.Stderr, "Error: Target path is not a directory: %s\n", targetPath)
+			os.Exit(1)
+		}
+	} else {
+		// No custom path - use current working directory
+		currentDir, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
+			os.Exit(1)
+		}
+		targetDir = currentDir
 	}
 
-	// If name is empty, use the current directory name
+	// If name is empty, use the target directory name
 	if name == "" {
-		name = filepath.Base(currentDir)
+		name = filepath.Base(targetDir)
 	}
 
 	// Sanitize bookmark name
@@ -512,12 +553,12 @@ func createBookmark(config Config, name string) {
 	}
 
 	// Create the symlink
-	if err := os.Symlink(currentDir, symlinkPath); err != nil {
+	if err := os.Symlink(targetDir, symlinkPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating bookmark: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("✓ Created bookmark '%s' -> %s\n", name, currentDir)
+	fmt.Printf("✓ Created bookmark '%s' -> %s\n", name, targetDir)
 }
 
 func listBookmarks(config Config) {
@@ -585,7 +626,7 @@ func listBookmarks(config Config) {
 	// Print bookmarks
 	for _, bm := range bookmarks {
 		if bm.broken {
-			fmt.Printf("  %s -> [broken] %s\n", bm.name, bm.target)
+			fmt.Printf("  %s -> [%sbroken%s] %s%s%s\n", bm.name, colorRed, colorReset, colorRed, bm.target, colorReset)
 		} else {
 			fmt.Printf("  %s -> %s\n", bm.name, bm.target)
 		}
@@ -795,6 +836,7 @@ func printHelp() {
 USAGE:
   mark                 Create bookmark with current directory name
   mark <name>          Create bookmark with custom name
+  mark <name> <path>   Create bookmark pointing to custom path
   mark [OPTIONS]
 
 OPTIONS:
@@ -813,6 +855,8 @@ OPTIONS:
 EXAMPLES:
   mark                 Create bookmark (if in ~/projects, creates 'projects')
   mark downloads       Create bookmark 'downloads' pointing to current dir
+  mark work ~/work     Create bookmark 'work' pointing to ~/work
+  mark tmp /tmp        Create bookmark 'tmp' pointing to /tmp
   mark -l              List all bookmarks with their targets
   mark -d downloads    Delete the 'downloads' bookmark
   mark -j projects     Print path to 'projects' bookmark

@@ -342,6 +342,33 @@ func TestBookmarkOperations(t *testing.T) {
 		}
 	})
 
+	// Test custom path bookmark creation
+	t.Run("create bookmark with custom path", func(t *testing.T) {
+		// Create a test directory to bookmark
+		customDir := filepath.Join(tmpDir, "custom-location")
+		if err := os.MkdirAll(customDir, 0755); err != nil {
+			t.Fatalf("Could not create custom directory: %v", err)
+		}
+
+		// Create bookmark with custom path (not current directory)
+		bookmarkName := "custommark"
+		symlinkPath := filepath.Join(marksDir, bookmarkName)
+
+		if err := os.Symlink(customDir, symlinkPath); err != nil {
+			t.Fatalf("Could not create symlink: %v", err)
+		}
+
+		// Verify symlink target points to custom directory
+		target, err := os.Readlink(symlinkPath)
+		if err != nil {
+			t.Fatalf("Could not read symlink: %v", err)
+		}
+
+		if target != customDir {
+			t.Errorf("Symlink target = %q, want %q", target, customDir)
+		}
+	})
+
 	// Test broken symlink detection
 	t.Run("detect broken symlink", func(t *testing.T) {
 		// Create a symlink to a non-existent directory

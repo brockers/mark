@@ -146,10 +146,48 @@ cd "$BROKEN_DIR"
 "$MARK_BINARY" brokenmark >/dev/null 2>&1
 rm -rf "$BROKEN_DIR"
 
-if "$MARK_BINARY" -l 2>/dev/null | grep "brokenmark" | grep -q "\[broken\]"; then
+if "$MARK_BINARY" -l 2>/dev/null | grep "brokenmark" | grep -q "broken"; then
     test_pass "Broken symlink detected and marked"
 else
     test_fail "Broken symlink not properly detected"
+fi
+
+# Test 9b: Verify broken symlink shows in red
+run_test "Broken symlink shows 'broken' and path in red color"
+LIST_OUTPUT=$("$MARK_BINARY" -l 2>/dev/null | grep "brokenmark")
+if echo "$LIST_OUTPUT" | grep -q $'\033\[0;31mbroken\033\[0m' && echo "$LIST_OUTPUT" | grep -q $'\033\[0;31m.*will-be-deleted\033\[0m'; then
+    test_pass "Broken symlink 'broken' and path displayed in red"
+else
+    test_fail "Broken symlink not fully displayed in red"
+fi
+
+# Test 10: Create bookmark with custom path
+run_test "Create bookmark with custom path"
+CUSTOM_DIR="$HOME/some-other-location"
+mkdir -p "$CUSTOM_DIR"
+cd "$HOME"
+
+if "$MARK_BINARY" customloc "$CUSTOM_DIR" 2>/dev/null | grep -q "Created bookmark 'customloc'"; then
+    test_pass "Created bookmark with custom path"
+else
+    test_fail "Failed to create bookmark with custom path"
+fi
+
+# Test 11: Verify custom path bookmark points to correct location
+run_test "Custom path bookmark points to correct location"
+JUMP_OUTPUT=$("$MARK_BINARY" -j customloc 2>/dev/null)
+if [ "$JUMP_OUTPUT" = "$CUSTOM_DIR" ]; then
+    test_pass "Custom path bookmark points to correct directory"
+else
+    test_fail "Custom path bookmark points to wrong directory (got: $JUMP_OUTPUT, expected: $CUSTOM_DIR)"
+fi
+
+# Test 12: Custom path with non-existent directory fails
+run_test "Custom path with non-existent directory fails gracefully"
+if "$MARK_BINARY" badmark "/nonexistent/path" 2>&1 | grep -q "does not exist"; then
+    test_pass "Non-existent path rejected with error message"
+else
+    test_fail "Non-existent path not properly handled"
 fi
 
 # Print summary

@@ -24,6 +24,17 @@ mark downloads
 
 Creates a symbolic link in your ~/.marks/ folder, named downloads that points to the folder you are currently in.
 
+### Create with Custom Path
+
+Create a bookmark pointing to a custom directory (not current directory)
+
+```bash
+mark work ~/projects/work
+mark tmp /tmp
+```
+
+Creates a symbolic link in your ~/.marks/ folder with the specified name that points to the given path. The path can be absolute or relative, and tilde expansion is supported.
+
 ### Show Bookmarks
 
 List all of your bookmarks and where they point to:
