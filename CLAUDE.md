@@ -140,6 +140,16 @@ mark/
 
 ## Development Guidelines
 
+### CRITICAL REQUIREMENT: Never Run `git add`
+
+**NEVER** run `git add`, `git add -A`, `git add .`, or `git add <file>` unless:
+1. Adding release notes (RELEASE.md) during version bumping
+2. Explicitly instructed by the user to stage specific files
+
+The user stages files manually as a review checkpoint before commits. Running `git add` bypasses their review process. Always wait for the user to stage changes themselves.
+
+**Exception:** During automated release workflows (`/development:release`), staging is permitted as part of the version bump process.
+
 ### CRITICAL REQUIREMENT: Test-Driven Development
 
 **MANDATORY**: When adding functionality, modifying functionality, or fixing bugs, you **MUST ALWAYS**:
