@@ -1,5 +1,44 @@
 # Release Notes
 
+## v0.1.3 - 2026-01-28
+
+### Refactoring
+
+- **Unified shell configuration** (df84aad)
+  - Consolidate all shell configuration (aliases AND completions) into single RC files
+  - Bash: `~/.mark_bash_rc`, Zsh: `~/.mark_zsh_rc`, Fish: `~/.config/fish/conf.d/mark.fish`
+  - Single source line in shell config with existence check
+  - Feature tracking header in RC files (`# Features: aliases completions`)
+  - Automatic migration from legacy configuration format
+
+### Documentation
+
+- **Simplified README** (6cbbe40)
+  - Reduced from 269 to 79 lines (70% smaller)
+  - Quick Start workflow replaces verbose examples
+  - Compact usage table for command reference
+  - Consolidated developer docs into CLAUDE.md
+
+- **Developer documentation improvements** (63231ee, 88b8ae0, f955260)
+  - Added critical requirement to never run `git add` without permission
+  - Expanded test coverage breakdown table
+  - Manual shell completion troubleshooting guide
+  - Updated version references
+
+### Bug Fixes
+
+- **Release script** (3ad9da0)
+  - Fix incorrect binary name (`./note` → `./mark`)
+  - Update test command (`make test-all` → `make test`)
+
+### Features
+
+- **New flags** (df84aad)
+  - Add `--configure` as alias for `--config`
+  - Update completion scripts to include `--configure`
+
+---
+
 ## v0.1.2 - 2026-01-13
 
 ### Features
