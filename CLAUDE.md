@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Current Version**: v0.0.1 (Initial Release)
-**Status**: In Development
+**Current Version**: v0.1.2
+**Status**: Active Development
 **Language**: Go 1.24.11
 
 This is a **minimalist command-line bookmark management tool** written in Go. It provides a simple, opinionated interface for creating, organizing, and managing directory bookmarks using symbolic links, with multi-shell completion support (Bash, Zsh, Fish).
@@ -167,30 +167,41 @@ Test placement:
 
 ### Testing Strategy
 
-The project includes automated tests across three test suites:
+The project includes automated tests across four test suites (~65 tests total):
 
-1. **Unit Tests** (`main_test.go`)
-   - Core functionality, path handling, configuration
-   - Symlink creation and deletion
-   - Flag parsing
-   - Edge case handling
+| Suite | File | Tests | Coverage |
+|-------|------|-------|----------|
+| Unit | `main_test.go` | ~14 | Core functions, flag parsing, path handling, RC generation |
+| Integration | `scripts/integration_test.sh` | ~13 | End-to-end workflows, bookmarking, jumping, broken links |
+| Completion | `scripts/completion_test.sh` | ~29 | Tab completion for Bash/Zsh/Fish, partial matching, aliases |
+| Setup | `scripts/setup_integration_test.sh` | ~11 | First-run setup, shell config, unified RC files |
 
-2. **Integration Tests** (`scripts/integration_test.sh`)
-   - End-to-end user workflows
-   - Bookmark creation, listing, deletion, jumping
-   - Broken symlink handling
-   - Special character handling
+**Unit Tests** (`main_test.go`):
+- Core functionality, path handling, configuration
+- Symlink creation and deletion
+- Flag parsing
+- RC file generation (bash, zsh, fish)
+- Source line detection and feature parsing
 
-3. **Completion Tests** (`scripts/completion_test.sh`)
-   - Tab completion for Bash, Zsh, Fish
-   - Partial matching
-   - Flag completion
+**Integration Tests** (`scripts/integration_test.sh`):
+- End-to-end user workflows
+- Bookmark creation, listing, deletion, jumping
+- Broken symlink handling
+- Custom path bookmarks
 
-4. **Setup Tests** (`scripts/setup_integration_test.sh`)
-   - First-run setup flow
-   - Configuration management
-   - Shell detection and alias setup
-   - Autocomplete installation
+**Completion Tests** (`scripts/completion_test.sh`):
+- Tab completion for Bash, Zsh, Fish
+- Partial matching
+- Flag completion
+- Alias completions (marks, unmark, jump)
+- Broken bookmark formatting
+
+**Setup Tests** (`scripts/setup_integration_test.sh`):
+- First-run setup flow
+- Configuration management
+- Shell detection and alias setup
+- Unified RC file creation
+- Source line installation
 
 ### Key Functions to Understand
 
@@ -393,6 +404,28 @@ jump() {
 - Check directory permissions: `ls -la ~/.marks`
 - Verify symlinks with: `ls -la ~/.marks/<bookmark-name>`
 - Test symlink creation manually: `ln -s /path/to/target ~/.marks/test`
+
+### Shell Completion Issues
+
+If `mark --autocomplete` doesn't work, manual setup:
+
+**Bash** - Add to `~/.bashrc`:
+```bash
+[ -f ~/.mark_bash_rc ] && source ~/.mark_bash_rc
+```
+
+**Zsh** - Add to `~/.zshrc`:
+```bash
+[ -f ~/.mark_zsh_rc ] && source ~/.mark_zsh_rc
+```
+
+**Fish** - File should auto-load from `~/.config/fish/conf.d/mark.fish`
+
+To regenerate RC files manually, delete the existing file and re-run `mark --autocomplete` or `mark --alias`.
+
+## Related Projects
+
+- [note](https://github.com/brockers/note) - A minimalist command line note creation/management tool (mark is based on this template)
 
 ## Future Enhancements (Maybe)
 
