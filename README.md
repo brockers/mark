@@ -15,15 +15,15 @@ mark                    # creates bookmark named "myapp"
 mark work               # creates bookmark named "work"
 
 # List all bookmarks
-mark -l
+mark -l # Or use (marks) if you enabled aliases)
 #   myapp -> /home/user/projects/myapp
 #   work  -> /home/user/projects/myapp
 
 # Jump to a bookmark
-jump work               # cd's to the bookmarked directory
+jump work # cd's to the bookmarked directory (or use mark -h work)
 
 # Delete a bookmark
-mark -d work
+mark -d work # Or use (unmark work) if you have enabled aliases
 ```
 
 On first run, `mark` will prompt to set up tab completion and shell aliases (`marks`, `unmark`, `jump`).
