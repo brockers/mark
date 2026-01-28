@@ -61,11 +61,11 @@ make install        # Install system-wide (requires sudo)
 make clean          # Clean build artifacts
 
 # Testing Commands
-make test                 # Run unit tests
+make test                 # Run all test suites (unit, integration, completion, setup)
+make test-unit            # Run unit tests only
 make integration-test     # Run integration tests
 make completion-test      # Run tab completion tests
-make setup-test          # Run setup/configuration tests
-make test-all            # Run all test suites
+make setup-test           # Run setup/configuration tests
 
 # Code Quality Commands
 make fmt            # Format Go code
@@ -81,19 +81,19 @@ make bump-major     # Bump major version
 
 ```bash
 # Unit tests
-go test -v
+make test-unit
 
 # Integration tests
-./scripts/integration_test.sh
+make integration-test
 
 # Completion tests
-./scripts/completion_test.sh
+make completion-test
 
 # Setup tests
-./scripts/setup_integration_test.sh
+make setup-test
 
 # All tests
-make test-all
+make test
 ```
 
 ## Validation Commands
@@ -112,10 +112,10 @@ make build                  # Build the binary
 ./mark --version            # Verify build
 
 # Level 2: Unit Tests
-make test
+make test-unit
 
 # Level 3: All Tests (REQUIRED before release)
-make test-all
+make test
 ```
 
 ## Project Structure
@@ -147,7 +147,7 @@ mark/
 1. **Write tests** to verify the new functionality works correctly
 2. **Add regression tests** for bug fixes to prevent the bug from reoccurring
 3. **Update existing tests** when modifying functionality
-4. **Run `make test-all`** to ensure all tests pass before committing
+4. **Run `make test`** to ensure all tests pass before committing
 
 This is **NON-NEGOTIABLE**. No code changes should be committed without corresponding test coverage.
 
@@ -227,7 +227,7 @@ Use the `/development:release` command for fully automated releases (if .claude/
 # 1. Clean and validate
 make clean && make vet && make fmt
 git diff --exit-code  # Verify no fmt changes
-make test-all         # All tests must pass
+make test         # All tests must pass
 
 # 2. Bump version and tag
 make bump             # Creates tag (e.g., v0.0.2)
@@ -275,7 +275,7 @@ Remember: This is a focused CLI tool following Unix philosophy. Keep changes min
 1. **Read the code first**: Understand existing patterns
 2. **Write tests first**: Test-driven development
 3. **Keep it simple**: Resist feature creep
-4. **Run all tests**: Use `make test-all` before committing
+4. **Run all tests**: Use `make test` before committing
 5. **Update docs**: README.md, RELEASE.md, and this file
 6. **Follow conventions**: Match existing code style
 

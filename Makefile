@@ -1,4 +1,4 @@
-.PHONY: build release test clean install uninstall help bump bump-major bump-minor bump-patch version-current
+.PHONY: build release test test-unit clean install uninstall help bump bump-major bump-minor bump-patch version-current
 
 # Default target - build the project
 all: build
@@ -8,13 +8,12 @@ help:
 	@echo "Available make targets:"
 	@echo "  build           - Build the mark binary"
 	@echo "  release         - Build release binary with version from current git tag"
-	@echo "  test            - Run Go unit tests"
+	@echo "  test            - Run all tests (unit, integration, completion, setup)"
+	@echo "  test-unit       - Run Go unit tests only"
 	@echo "  integration-test - Run integration tests"
 	@echo "  completion-test - Run completion functionality tests"
 	@echo "  setup-test      - Run setup/config integration tests"
-	@echo "  setup-test-ci   - Run setup tests (non-failing for CI)"
-	@echo "  test-all        - Run all tests"
-	@echo "  test-all-ci     - Run all tests (non-failing for CI)"
+	@echo "  test-ci         - Run all tests (non-failing for CI)"
 	@echo "  install         - Install mark system-wide (requires sudo)"
 	@echo "  uninstall       - Remove mark from system"
 	@echo "  clean           - Clean build artifacts"
@@ -87,8 +86,8 @@ bump-patch:
 	git tag -a $$NEW_VERSION -m "Release $$NEW_VERSION"; \
 	echo "Created tag $$NEW_VERSION"
 
-# Run unit tests
-test:
+# Run unit tests only
+test-unit:
 	go test -v ./...
 
 # Run integration tests
@@ -103,15 +102,12 @@ completion-test: build
 setup-test: build
 	./scripts/setup_integration_test.sh
 
-# Run setup integration tests (non-failing for CI)
-setup-test-ci: build
-	-./scripts/setup_integration_test.sh
-
 # Run all tests
-test-all: test integration-test completion-test setup-test-ci
+test: test-unit integration-test completion-test setup-test
 
 # Run all tests (non-failing for CI)
-test-all-ci: test integration-test completion-test setup-test-ci
+test-ci: test-unit integration-test completion-test
+	-./scripts/setup_integration_test.sh
 
 # Clean build artifacts
 clean:

@@ -24,7 +24,11 @@
       "Bash(make bump:*)",
       "Bash(make release:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebSearch",
+      "Bash(make setup-test:*)",
+      "Bash(make test-unit:*)",
+      "Bash(make help:*)"
     ]
   }
 }

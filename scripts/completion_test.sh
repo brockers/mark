@@ -269,7 +269,8 @@ ln -s "/nonexistent/path/that/does/not/exist" "$TEMP_TEST_DIR/.marks/broken_test
 ln -s "$TEMP_TEST_DIR" "$TEMP_TEST_DIR/.marks/working_test"
 
 # Create the bash completion script and test it
-MARK_BINARY="$(dirname "$0")/../mark"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MARK_BINARY_ABS="$SCRIPT_DIR/../mark"
 mkdir -p "$TEST_HOME"
 echo "marksdir=$TEMP_TEST_DIR/.marks" > "$TEST_HOME/.mark"
 
@@ -277,20 +278,18 @@ echo "marksdir=$TEMP_TEST_DIR/.marks" > "$TEST_HOME/.mark"
 OLD_HOME="$HOME"
 export HOME="$TEST_HOME"
 export SHELL="/bin/bash"
-echo "y" | "$MARK_BINARY" --autocomplete > /dev/null 2>&1 || true
+echo "y" | "$MARK_BINARY_ABS" --autocomplete > /dev/null 2>&1 || true
 
-# Restore HOME
-export HOME="$OLD_HOME"
-
-BASH_COMPLETION_FILE="$TEST_HOME/.mark.bash"
+BASH_COMPLETION_FILE="$TEST_HOME/.mark_bash_rc"
 
 if [ -f "$BASH_COMPLETION_FILE" ]; then
     # Source the completion script
     source "$BASH_COMPLETION_FILE"
 
     # Test that _mark_list_with_paths detects broken symlinks
+    # Note: HOME must stay as TEST_HOME so mark -l uses the test config
     cd "$TEMP_TEST_DIR"  # Change to test directory for relative paths
-    output=$(_mark_list_with_paths)
+    output=$("$MARK_BINARY_ABS" -l)
 
     # Check for [broken] marker in output (accounting for ANSI codes between [ and ])
     if echo "$output" | grep -q "broken"; then
@@ -319,11 +318,14 @@ else
     ((TESTS_FAILED++))
 fi
 
+# Restore HOME for remaining tests
+export HOME="$OLD_HOME"
+
 echo
 echo "Verifying completion registration for all aliases..."
 
 # Reuse the TEST_HOME from the broken bookmark test above
-BASH_COMPLETION_FILE="$TEST_HOME/.mark.bash"
+BASH_COMPLETION_FILE="$TEST_HOME/.mark_bash_rc"
 
 if [ -f "$BASH_COMPLETION_FILE" ]; then
     if grep -q "complete -F _mark_complete mark" "$BASH_COMPLETION_FILE" &&

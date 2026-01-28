@@ -110,6 +110,53 @@ else
     test_fail "Shell detection failed"
 fi
 
+# Test 7: Unified RC file created for completions
+run_test "Unified RC file created for completions"
+# Clean up first
+rm -f "$HOME/.mark_bash_rc"
+printf "$HOME/.marks\ny\nn\n" | "$MARK_BINARY" --config >/dev/null 2>&1 || true
+if [ -f "$HOME/.mark_bash_rc" ]; then
+    test_pass "Unified RC file created at ~/.mark_bash_rc"
+else
+    test_fail "Unified RC file not created"
+fi
+
+# Test 8: Source line added to .bashrc
+run_test "Source line added to .bashrc"
+if grep -q "# mark shell integration" "$HOME/.bashrc" 2>/dev/null; then
+    test_pass "Source line found in .bashrc"
+else
+    test_fail "Source line not found in .bashrc"
+fi
+
+# Test 9: RC file contains features header
+run_test "RC file contains features header"
+if grep -q "# Features:" "$HOME/.mark_bash_rc" 2>/dev/null; then
+    test_pass "Features header found in RC file"
+else
+    test_fail "Features header not found in RC file"
+fi
+
+# Test 10: Aliases setup creates unified RC with aliases
+run_test "Aliases setup creates unified RC with aliases"
+rm -f "$HOME/.mark_bash_rc"
+printf "y\n" | "$MARK_BINARY" --alias >/dev/null 2>&1 || true
+if [ -f "$HOME/.mark_bash_rc" ] && grep -q "alias marks=" "$HOME/.mark_bash_rc" 2>/dev/null; then
+    test_pass "Aliases added to unified RC file"
+else
+    test_fail "Aliases not found in unified RC file"
+fi
+
+# Test 11: Both aliases and completions in single RC file
+run_test "Both aliases and completions in single RC file"
+rm -f "$HOME/.mark_bash_rc"
+printf "$HOME/.marks\ny\ny\n" | "$MARK_BINARY" --config >/dev/null 2>&1 || true
+if grep -q "alias marks=" "$HOME/.mark_bash_rc" 2>/dev/null && grep -q "_mark_complete()" "$HOME/.mark_bash_rc" 2>/dev/null; then
+    test_pass "Both aliases and completions in RC file"
+else
+    test_fail "Missing aliases or completions in RC file"
+fi
+
 # Print summary
 echo ""
 echo "========================================"

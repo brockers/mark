@@ -21,7 +21,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -283,12 +282,23 @@ func setupAliases(reader *bufio.Reader) {
 }
 
 func areAliasesAlreadySetup() bool {
+	shell := detectShell()
+	if shell == "" {
+		return false
+	}
+
+	// Check if aliases are enabled in the new RC file
+	aliases, _ := getEnabledFeatures(shell)
+	if aliases {
+		return true
+	}
+
+	// Also check legacy locations for backwards compatibility
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false
 	}
 
-	shell := detectShell()
 	switch shell {
 	case "bash":
 		bashrc := filepath.Join(homeDir, ".bashrc")
@@ -303,8 +313,8 @@ func areAliasesAlreadySetup() bool {
 			return strings.Contains(contentStr, "alias marks=") && strings.Contains(contentStr, "alias unmark=") && strings.Contains(contentStr, "function jump")
 		}
 	case "fish":
-		fishConfigDir := filepath.Join(homeDir, ".config", "fish", "config.fish")
-		if content, err := os.ReadFile(fishConfigDir); err == nil {
+		fishConfigFile := filepath.Join(homeDir, ".config", "fish", "config.fish")
+		if content, err := os.ReadFile(fishConfigFile); err == nil {
 			contentStr := string(content)
 			return strings.Contains(contentStr, "alias marks ") && strings.Contains(contentStr, "alias unmark ") && strings.Contains(contentStr, "function jump")
 		}
@@ -319,46 +329,24 @@ func setupBashAliases() {
 		return
 	}
 
-	bashrcPath := filepath.Join(homeDir, ".bashrc")
+	// Check if completions are already enabled (preserve them)
+	_, completions := getEnabledFeatures("bash")
 
-	// Get the full path to the mark binary
-	markPath, err := os.Executable()
-	if err != nil {
-		// Fallback to checking PATH
-		markPath, err = exec.LookPath("mark")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not determine mark command path: %v\n", err)
-			return
-		}
-	}
-
-	aliasLines := fmt.Sprintf(`
-# mark command aliases
-alias marks='%s -l'
-alias unmark='%s -d'
-function jump() {
-    local target=$(%s -j "$@")
-    if [ $? -eq 0 ] && [ -n "$target" ]; then
-        cd "$target"
-    fi
-}
-`, markPath, markPath, markPath)
-
-	// Append to .bashrc
-	file, err := os.OpenFile(bashrcPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening .bashrc: %v\n", err)
-		return
-	}
-	defer file.Close()
-
-	if _, err := file.WriteString(aliasLines); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing aliases to .bashrc: %v\n", err)
+	// Write unified RC file with aliases enabled
+	if err := writeShellRC("bash", true, completions); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing bash RC file: %v\n", err)
 		return
 	}
 
+	// Add source line to .bashrc if not present
+	if err := ensureSourceLine("bash"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error updating .bashrc: %v\n", err)
+		return
+	}
+
+	rcPath := filepath.Join(homeDir, bashRCFile)
 	fmt.Printf("✓ Bash aliases setup complete!\n")
-	fmt.Printf("  Added 'marks', 'unmark', and 'jump' aliases to %s\n", bashrcPath)
+	fmt.Printf("  Added 'marks', 'unmark', and 'jump' aliases to %s\n", rcPath)
 	fmt.Printf("  Run 'source ~/.bashrc' or restart your shell to activate aliases\n")
 }
 
@@ -369,46 +357,24 @@ func setupZshAliases() {
 		return
 	}
 
-	zshrcPath := filepath.Join(homeDir, ".zshrc")
+	// Check if completions are already enabled (preserve them)
+	_, completions := getEnabledFeatures("zsh")
 
-	// Get the full path to the mark binary
-	markPath, err := os.Executable()
-	if err != nil {
-		// Fallback to checking PATH
-		markPath, err = exec.LookPath("mark")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not determine mark command path: %v\n", err)
-			return
-		}
-	}
-
-	aliasLines := fmt.Sprintf(`
-# mark command aliases
-alias marks='%s -l'
-alias unmark='%s -d'
-function jump() {
-    local target=$(%s -j "$@")
-    if [ $? -eq 0 ] && [ -n "$target" ]; then
-        cd "$target"
-    fi
-}
-`, markPath, markPath, markPath)
-
-	// Append to .zshrc
-	file, err := os.OpenFile(zshrcPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening .zshrc: %v\n", err)
-		return
-	}
-	defer file.Close()
-
-	if _, err := file.WriteString(aliasLines); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing aliases to .zshrc: %v\n", err)
+	// Write unified RC file with aliases enabled
+	if err := writeShellRC("zsh", true, completions); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing zsh RC file: %v\n", err)
 		return
 	}
 
+	// Add source line to .zshrc if not present
+	if err := ensureSourceLine("zsh"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error updating .zshrc: %v\n", err)
+		return
+	}
+
+	rcPath := filepath.Join(homeDir, zshRCFile)
 	fmt.Printf("✓ Zsh aliases setup complete!\n")
-	fmt.Printf("  Added 'marks', 'unmark', and 'jump' aliases to %s\n", zshrcPath)
+	fmt.Printf("  Added 'marks', 'unmark', and 'jump' aliases to %s\n", rcPath)
 	fmt.Printf("  Run 'source ~/.zshrc' or restart your shell to activate aliases\n")
 }
 
@@ -419,54 +385,19 @@ func setupFishAliases() {
 		return
 	}
 
-	// Create fish config directory if it doesn't exist
-	fishConfigDir := filepath.Join(homeDir, ".config", "fish")
-	if err := os.MkdirAll(fishConfigDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating fish config directory: %v\n", err)
+	// Check if completions are already enabled (preserve them)
+	_, completions := getEnabledFeatures("fish")
+
+	// Write unified RC file with aliases enabled
+	if err := writeShellRC("fish", true, completions); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing fish RC file: %v\n", err)
 		return
 	}
 
-	fishConfigPath := filepath.Join(fishConfigDir, "config.fish")
-
-	// Get the full path to the mark binary
-	markPath, err := os.Executable()
-	if err != nil {
-		// Fallback to checking PATH
-		markPath, err = exec.LookPath("mark")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not determine mark command path: %v\n", err)
-			return
-		}
-	}
-
-	aliasLines := fmt.Sprintf(`
-# mark command aliases
-alias marks '%s -l'
-alias unmark '%s -d'
-function jump
-    set -l target (%s -j $argv)
-    if test $status -eq 0 -a -n "$target"
-        cd "$target"
-    end
-end
-`, markPath, markPath, markPath)
-
-	// Append to config.fish
-	file, err := os.OpenFile(fishConfigPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening fish config: %v\n", err)
-		return
-	}
-	defer file.Close()
-
-	if _, err := file.WriteString(aliasLines); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing aliases to fish config: %v\n", err)
-		return
-	}
-
+	rcPath := filepath.Join(homeDir, fishRCFile)
 	fmt.Printf("✓ Fish aliases setup complete!\n")
-	fmt.Printf("  Added 'marks', 'unmark', and 'jump' aliases to %s\n", fishConfigPath)
-	fmt.Printf("  Restart your shell to activate aliases\n")
+	fmt.Printf("  Added 'marks', 'unmark', and 'jump' aliases to %s\n", rcPath)
+	fmt.Printf("  Fish auto-sources files in conf.d, restart your shell to activate\n")
 }
 
 func expandPath(path string) string {
@@ -739,7 +670,7 @@ func parseFlags(args []string) (*ParsedFlags, []string) {
 			flags.Help = true
 		} else if arg == "--version" {
 			flags.Version = true
-		} else if arg == "--config" {
+		} else if arg == "--config" || arg == "--configure" {
 			flags.Config = true
 		} else if arg == "--autocomplete" {
 			flags.Autocomplete = true
@@ -847,7 +778,7 @@ OPTIONS:
   -v                   Print version number
 
   --help               Show this help message
-  --config             Run setup/reconfigure
+  --config, --configure  Run setup/reconfigure
   --autocomplete       Setup/update command line autocompletion
   --alias              Setup/update shell aliases
   --version            Print version number
