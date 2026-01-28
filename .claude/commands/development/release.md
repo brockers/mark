@@ -8,7 +8,7 @@ Automate the complete software release process including committing changes, bum
    - Run `make fmt` to format Go code
    - Check if fmt made any changes with `git diff --exit-code`
    - If fmt made changes, STOP and report that code needs formatting
-   - Run `make test-all` to execute all test suites
+   - Run `make test` to execute all test suites
    - If ANY tests fail, STOP and report the failures
    - If vet reports issues, STOP and report the issues
    - Show success message only after all checks pass
@@ -47,7 +47,7 @@ Automate the complete software release process including committing changes, bum
    - Run `make release` to build binary with version information injected
 
 6. **Validate release binary**:
-   - Run `./note --help` and capture the output
+   - Run `./mark --help` and capture the output
    - Verify the version matches the tag created (without 'v' prefix)
    - Verify the version is NOT "dev" or "0.0.0" (these indicate errors)
    - Verify Build Date is present and valid (not "not set")
@@ -74,7 +74,7 @@ Automate the complete software release process including committing changes, bum
 
 ## Important Notes
 
-- CRITICAL: Run cleanup and tests FIRST - make clean, vet, fmt, test-all must all pass
+- CRITICAL: Run cleanup and tests FIRST - make clean, vet, fmt, test must all pass
 - CRITICAL: If `make fmt` changes any files, STOP - code must be formatted before release
 - CRITICAL: If any tests fail, STOP - all tests must pass before release
 - CRITICAL: Release notes are automatically generated from git commits since the last tag
